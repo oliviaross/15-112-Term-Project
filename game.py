@@ -8,6 +8,11 @@
 from tkinter import *
 import math
 
+#Import game classes
+from level import *
+from player import *
+from mask import *
+
 """
 TO DO:
     - Level logic
@@ -21,7 +26,10 @@ TO DO:
 
 def init(data):
     # load data.xyz as appropriate
-    testPlayerClass(data)
+    Player(0, 0, None).testPlayerClass(data)
+    Mask(None).testMaskClass(dsta)
+
+    level1 = Level()
 
 def mousePressed(event, data):
     # use event.x and event.y
@@ -63,6 +71,7 @@ def run(width=300, height=300):
         redrawAllWrapper(canvas, data)
         # pause, then call timerFired again
         canvas.after(data.timerDelay, timerFiredWrapper, canvas, data)
+   
     # Set up data and call init
     class Struct(object): pass
     data = Struct()

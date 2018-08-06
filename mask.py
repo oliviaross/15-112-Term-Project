@@ -45,7 +45,26 @@ class Mask(object):
         canvas.create_text(self.cx, self.cy+20, 
             "I am the %s spirit of this Mask." % self.spirit, font="Arial 20")
 
+        return "I am the %s spirit of this Mask." % self.spirit
+
     def draw(self, canvas):
         if self.cx != None and self.cy != None:
             canvas.create_rectangle(self.cx-self.bulk, self.cy-self.bulk,
                     self.cx+self.bulk, self.cy+self.bulk, fill=self.color)
+
+def testMaskClass():
+    from player import *
+
+    testPlayer = Player(0, 0, "black")
+
+    #Try putting on the rabbit Mask
+    assert(Mask("Rabbit").speak() == "I am the Rabbit spirit of this Mask.")
+    
+    testPlayer.putOnMask(Mask("Rabbit"))
+
+    frogMask = Mask("Frog")
+    bearMask = Mask("Bear")
+    turtleMask = Mask("Turtle")
+    apeMask = Mask("Ape")
+
+
