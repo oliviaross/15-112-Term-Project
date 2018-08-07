@@ -25,7 +25,7 @@ class Player(object):
 
         self.bulk = 32
         self.power = 2
-        self.speed = self.bulk//2
+        self.speed = self.bulk//4
         self.health = 30
 
         self.masked = False
@@ -60,6 +60,7 @@ class Player(object):
     def reactToAttack(self, other):
         if isinstance(self.isTouchingOther(other), Player):
             self.health -= other.power
+            print("health decreased by ", other.power)
 
     def putOnMask(self, mask):
         if isinstance(mask, Mask):
@@ -80,92 +81,8 @@ class Player(object):
                 self.returnToNormal()
 
 ####################################
-# Testing player class
-####################################
-
-def testPlayerClass(data):
-    print("Testing Player class...", end="")
-    local_cx, local_cy = (data.width//2, data.height//2)
-
-    # A player is initialized with a location and color to indentify it. 
-    player1 = Player(local_cx, local_cy, "red")
-    assert(type(player1) == Player)
-    assert(isinstance(player1, Player))
-
-    # Check to see that we indeed have the player where it was placed. 
-    assert(str(player1) == ("The %s warrior stands tall at (%d, %d)." % (player1.color, local_cx, local_cy)))
-    assert(str([player1]) == ("[The %s warrior stands tall at (%d, %d).]" % (player1.color, local_cx, local_cy)))
-   
-    # The move() function takes a unit direction and multiplies the vector by a speed
-    # scalar to get the length of the vector traveled
-
-    player1.move((0, 1))
-    local_cx += 0*player1.speed
-    local_cy += 1*player1.speed
-
-    assert(player1.getPosition() == (local_cx, local_cy))
-
-    # Time to test interactions with other players:
-    local_cx, local_cy = (data.width//2, data.height//2)
-    player2 = Player(local_cx, local_cy, "purple")
-    assert(type(player2) == Player)
-    assert(isinstance(player2, Player))
-
-    # All players begin with a radius/bulk of ten. With no x-distance 
-    # and a vertical distance of 5, the two players should be 
-    # colliding right now. Let's check their interactions. 
-
-    player2.move((0, -1)) # move player2 to the center of the screen
-    assert(player1.isTouchingOther(player2) == player2)
-
-    # Let's move player2 even farther away from player1, to check that they 
-    # know when they don't collide. 
-
-    player2.move((0, -1))
-    player2.move((0, -1))
-    player2.move((0, -1))
-    player2.move((0, -1))
-
-    assert(player1.isTouchingOther(player2) == None)
-
-    # Now to test their fighting abilites. When one player attacks another, 
-    # the other should react to the attack. 
-
-    player2.move((0, 1))
-    player2.move((0, 1))
-    player2.move((0, 1))
-    player2.move((0, 1)) # moves player2 back to original position
-
-    assert(player1.isTouchingOther(player2) == player2)
-
-    local_health = player1.health
-    local_power = player2.power
-    dhealth = local_health - local_power # local calculation of damage
-
-    player2.attack(player1)
-
-    assert(player1.health == dhealth)
-
-    # Just for fun, let's test the returnToNormal function call to see if 
-    # it actually works. 
-
-    local_cx, local_cy = (data.width//2, data.height//2)
-
-    player1.returnToNormal()
-    player2.returnToNormal()
-
-    assert(player1.getPosition() == (local_cx, local_cy))
-    assert(player2.getPosition() == (local_cx, local_cy))
-
-    assert(player1.isTouchingOther(player2) == player2)
-    assert(player2.isTouchingOther(player1) == player1)
-
-    print("Done!")
-
-####################################
 # Mask class
 ####################################
-
 class Mask(object):
     def __init__(spirit):
         self.spirit = spirit
@@ -217,28 +134,8 @@ class Mask(object):
                     self.cx+self.bulk, self.cy+self.bulk, fill=self.color)
 
 ####################################
-# Testing mask class
-####################################
-
-def testMaskClass():
-
-    testPlayer = Player(0, 0, "black")
-
-    #Try putting on the rabbit Mask
-    assert(Mask("Rabbit").speak() == "I am the Rabbit spirit of this Mask.")
-    
-    testPlayer.putOnMask(Mask("Rabbit"))
-
-    frogMask = Mask("Frog")
-    bearMask = Mask("Bear")
-    turtleMask = Mask("Turtle")
-    apeMask = Mask("Ape")
-
-
-####################################
 # Level class
 ####################################
-
 class Level(object):
     def __init__(self):
         self.data = [
@@ -273,20 +170,37 @@ class Level(object):
                     x1, y1 = x0 + self.cellWidth, y0 + self.cellHeight
                     canvas.create_rectangle(x0, y0, x1, y1, fill="darkgreen")
 
+    def cornerInRectangle(self, corner, rectangle):
+        cornerX, cornerY = corner
+        rectX0, rectY0, rectX1, rectY1 = rectangle
+
+        if (rectX0 < cornerX < rectX1) and (rectY0 < cornerY < rectY1):
+            return True
+
+        return False
+
+
     def detectActiveLayerCollision(self, player):
         if not isinstance(player, Player): return
+        cx, cy, r = player.cx, player.cy, player.bulk
         for row in range(self.rows):
             for col in range(self.cols):
                 if self.data[row][col] == True: ## actual ground and stuff
                     x0, y0 = self.cellWidth*col, self.cellHeight*row
                     x1, y1 = x0 + self.cellWidth, y0 + self.cellHeight
-                    if ((x0 < player.cx - player.bulk) and (player.cx + player.bulk < x1)
-                         and (y0 < player.cy < y1)):
-                        print(x0, player.cx, x1) 
-                        print(y0, player.cx, x1)
+                    rectangle = (x0, y0, x1, y1)
+                    circleRect = (cx-r, cy-r, cx+r, cy+r)
+                    if (self.cornerInRectangle((cx-r, cy-r), rectangle) or 
+                        self.cornerInRectangle((cx+r, cy-r), rectangle) or
+                        self.cornerInRectangle((cx-r, cy+r), rectangle) or
+                        self.cornerInRectangle((cx+r, cy+r), rectangle) or
+                        self.cornerInRectangle((x0, y0), circleRect) or
+                        self.cornerInRectangle((x0, y1), circleRect) or
+                        self.cornerInRectangle((x1, y0), circleRect) or
+                        self.cornerInRectangle((x1, y1), circleRect)):
                         return True
-        return False
 
+        return False
 
 ####################################
 # customize these functions
@@ -295,7 +209,9 @@ class Level(object):
 def init(data):
     # load data.xyz as appropriate
     data.level = Level()
-    data.player = Player(32, (data.height - data.height//12) - 35, "red")
+    data.playerOne = Player(32, (data.height - data.height//12) - 32, "red")
+    data.playerTwo = Player(data.width - 32, (data.height - data.height//12) - 32,"purple")
+    data.frogMask = Mask("Frog")
 
 def mousePressed(event, data):
     # use event.x and event.y
@@ -303,26 +219,60 @@ def mousePressed(event, data):
 
 def keyPressed(event, data):
     # use event.char and event.keysym
-    if event.char == "t":
-        print(data.level.detectActiveLayerCollision(data.player))
-
+    print(event.keysym)
+    # PLAYER ONE CONTROLS
     if event.keysym == "Left":
-        data.player.move((-1, 0))
-        if data.level.detectActiveLayerCollision(data.player):
+        data.playerOne.move((-1, 0))
+        if data.level.detectActiveLayerCollision(data.playerOne):
             print("Collision! Movement disabled!")
-            data.player.move(( 1, 0))
-
+            data.playerOne.move(( 1, 0))
     elif event.keysym == "Right":
-        data.player.move(( 1, 0))
-        if data.level.detectActiveLayerCollision(data.player):
+        data.playerOne.move(( 1, 0))
+        if data.level.detectActiveLayerCollision(data.playerOne):
             print("Collision! Movement disabled!")
-            data.player.move((-1, 0))
-
+            data.playerOne.move((-1, 0))
     elif event.keysym == "Up":
-        data.player.move((0, -1))
-        if data.level.detectActiveLayerCollision(data.player):
+        data.playerOne.move((0, -1))
+        if data.level.detectActiveLayerCollision(data.playerOne):
             print("Collision! Movement disabled!")
-            data.player.move((0, 1))
+            data.playerOne.move((0,  1))
+    elif event.keysym == "Down":
+        data.playerOne.move((0,  1))
+        if data.level.detectActiveLayerCollision(data.playerOne):
+            print("Collision! Movement disabled!")
+            data.playerOne.move((0, -1))
+
+    if event.keysym == "Shift_L":
+        data.playerOne.attack(data.playerTwo)
+        print("playerOne attacked!")
+        print("P2: health decreased to ", data.playerTwo.health)
+
+    # PLAYER TWO CONTROLS
+    if event.keysym == "w":
+        data.playerTwo.move((0, -1))
+        if data.level.detectActiveLayerCollision(data.playerTwo):
+            print("Collision! Movement disabled!")
+            data.playerOne.move((0,  1))
+    elif event.keysym == "s":
+        data.playerTwo.move((0,  1))
+        if data.level.detectActiveLayerCollision(data.playerTwo):
+            print("Collision! Movement disabled!")
+            data.playerTwo.move((0, -1))
+    elif event.keysym == "a":
+        data.playerTwo.move((-1, 0))
+        if data.level.detectActiveLayerCollision(data.playerTwo):
+            print("Collision! Movement disabled!")
+            data.playerTwo.move(( 1, 0))
+    elif event.keysym == "d":
+        data.playerTwo.move(( 1, 0))
+        if data.level.detectActiveLayerCollision(data.playerTwo):
+            print("Collision! Movement disabled!")
+            data.playerTwo.move((-1, 0))
+    if event.char == "e":
+        data.playerTwo.attack(data.playerOne)
+        print("playerTwo attacked!")
+        print("P1: health decreased to ", data.playerOne.health)
+
 
 def timerFired(data):
     # update game data once every tick
@@ -330,7 +280,13 @@ def timerFired(data):
 
 def redrawAll(canvas, data):
     data.level.draw(canvas, data.height, data.width)
-    data.player.draw(canvas)
+    data.playerOne.draw(canvas)
+    data.playerTwo.draw(canvas)
+
+    canvas.create_text(data.width//4, data.height//12, text="P1 HP: %d" % 
+                                    data.playerOne.health, font="Arial 20")
+    canvas.create_text(3*data.width//4, data.height//12, text="P2 HP: %d" % 
+                                    data.playerTwo.health, font="Arial 20")
 
 #################################################################
 # use the run function as-is
